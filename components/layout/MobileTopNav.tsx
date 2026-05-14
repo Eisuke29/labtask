@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 
 const tabs = [
   {
@@ -34,25 +34,47 @@ const tabs = [
   },
 ]
 
+function Spinner() {
+  return (
+    <svg className="w-5 h-5 animate-spin text-[#00d4ff]" viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 22 6.477 22 12h-4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+    </svg>
+  )
+}
+
 export default function MobileTopNav() {
   const pathname = usePathname()
+  const router = useRouter()
+  const [navigatingTo, setNavigatingTo] = useState<string | null>(null)
+
+  useEffect(() => {
+    setNavigatingTo(null)
+  }, [pathname])
+
+  const handleNav = (href: string) => {
+    if (pathname === href || navigatingTo === href) return
+    setNavigatingTo(href)
+    router.push(href)
+  }
 
   return (
     <nav className="md:hidden flex-shrink-0 bg-[#13131a] border-b border-[#1e1e2e] z-40">
       <div className="flex">
         {tabs.map((tab) => {
           const active = pathname === tab.href
+          const loading = navigatingTo === tab.href
           return (
-            <Link
+            <button
               key={tab.href}
-              href={tab.href}
+              onClick={() => handleNav(tab.href)}
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5"
             >
-              {tab.icon(active)}
-              <span className={`text-[10px] ${active ? 'text-[#00d4ff]' : 'text-[#6b6b8a]'}`}>
+              {loading ? <Spinner /> : tab.icon(active)}
+              <span className={`text-[10px] ${active || loading ? 'text-[#00d4ff]' : 'text-[#6b6b8a]'}`}>
                 {tab.label}
               </span>
-            </Link>
+            </button>
           )
         })}
       </div>
