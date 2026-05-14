@@ -126,6 +126,11 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const partnerColor = partner?.color ?? '#7c3aed'
   const sharedColor  = '#00d4ff'
 
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
+  const colW = isMobile ? 'calc(100vw - 2rem)' : '272px'
+  const colSnap = { width: colW, scrollSnapAlign: 'start' as const }
+
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor,  { activationConstraint: { delay: 200, tolerance: 5 } }),
@@ -299,7 +304,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
   const activeTask = activeId ? categories.flatMap((c) => c.tasks).find((t) => t.id === activeId) : null
 
-  const colProps = (cat: typeof mineCats[0], ownerType: OwnerType, readOnly: boolean) => ({
+  const colProps = (cat: (typeof mineCats)[0], ownerType: OwnerType, readOnly: boolean) => ({
     droppableId: `col-${cat.id}`,
     title: cat.name,
     color: cat.color,
@@ -318,11 +323,6 @@ export default function Dashboard({ currentUser, partner }: Props) {
     onToggleCompletion: toggleCompletion,
     onDelete: readOnly ? undefined : async () => { await deleteCategory(cat.id) },
   })
-
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
-  const colW = isMobile ? 'calc(100vw - 2rem)' : '272px'
-  const colSnap = { width: colW, scrollSnapAlign: 'start' as const }
 
   return (
     <div className="flex flex-col h-full">
