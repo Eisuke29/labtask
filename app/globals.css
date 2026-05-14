@@ -1,26 +1,129 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-base: #0a0a0f;
+  --color-card: #13131a;
+  --color-border: #1e1e2e;
+  --color-text-main: #e8e8f0;
+  --color-text-sub: #6b6b8a;
+
+  --color-cyan: #00d4ff;
+  --color-neon-green: #39ff14;
+  --color-hot-magenta: #ff006e;
+  --color-solar-orange: #ff6b00;
+  --color-violet: #7c3aed;
+  --color-gold: #ffd60a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-base: var(--color-base);
+  --color-card: var(--color-card);
+  --color-border: var(--color-border);
+  --color-text-main: var(--color-text-main);
+  --color-text-sub: var(--color-text-sub);
+  --color-cyan: var(--color-cyan);
+  --color-neon-green: var(--color-neon-green);
+  --color-hot-magenta: var(--color-hot-magenta);
+  --color-solar-orange: var(--color-solar-orange);
+  --color-violet: var(--color-violet);
+  --color-gold: var(--color-gold);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-heading: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-body: var(--font-ibm-plex-sans-jp), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-base);
+  color: var(--color-text-main);
+  font-family: var(--font-body);
+}
+
+/* カスタムスクロールバー */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-sub);
+}
+
+/* タスクカード アニメーション */
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes pulse-check {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+}
+
+@keyframes strikethrough {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+.animate-slide-in {
+  animation: slideInDown 0.25s ease-out;
+}
+
+.animate-fade-out {
+  animation: fadeOut 0.3s ease-in forwards;
+}
+
+.animate-pulse-check {
+  animation: pulse-check 0.3s ease-in-out;
+}
+
+.task-title-strike::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--color-text-sub);
+  animation: strikethrough 0.3s ease-out forwards;
+}
+
+/* ドラッグ中のスタイル */
+.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+/* グロー効果 */
+.glow-cyan {
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.3);
+}
+
+.glow-green {
+  box-shadow: 0 0 12px rgba(57, 255, 20, 0.3);
 }
