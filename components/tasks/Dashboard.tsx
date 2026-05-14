@@ -128,7 +128,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
-  const colW = isMobile ? 'calc(100vw - 2rem)' : '272px'
+  const colW = isMobile ? 'calc(50vw - 10px)' : '272px'
   const colSnap = { width: colW, scrollSnapAlign: 'start' as const }
 
   const sensors = useSensors(
@@ -357,7 +357,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
             className="h-full overflow-x-auto overflow-y-hidden"
             style={{ WebkitOverflowScrolling: 'touch', scrollSnapType: 'x proximity' } as React.CSSProperties}
           >
-            <div className="flex gap-2 md:gap-3 px-3 md:px-4 py-3 md:py-4 h-full">
+            <div className="flex gap-2 md:gap-3 px-2 md:px-4 py-2 md:py-4 h-full">
 
               {/* 🔔 通知中 */}
               <div
