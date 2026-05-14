@@ -44,6 +44,8 @@ export default function SettingsClient({ user, partner, devices: initialDevices 
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<string | null>(null)
   const [browserTestResult, setBrowserTestResult] = useState<string | null>(null)
+  const [triggerSending, setTriggerSending] = useState(false)
+  const [triggerResult, setTriggerResult] = useState<string | null>(null)
 
   const { isSupported, isSubscribed, loading: pushLoading, subscribe, unsubscribe } = usePushNotification(user.id)
 
@@ -385,6 +387,42 @@ export default function SettingsClient({ user, partner, devices: initialDevices 
         <div className="mt-4 pt-4 border-t border-[#1e1e2e]">
           <p className="text-xs text-[#6b6b8a]">通知時刻: <span className="text-[#e8e8f0]">毎朝 07:00（日本時間）固定</span></p>
           <p className="text-[10px] text-[#6b6b8a] mt-1">通知中タスクがある場合、毎朝7時にプッシュ通知が届きます</p>
+        </div>
+
+        {/* デバッグ: 手動配信トリガー */}
+        <div className="mt-4 pt-4 border-t border-[#1e1e2e] space-y-2">
+          <p className="text-[10px] text-[#3a3a52] font-mono uppercase tracking-widest">DEV</p>
+          <button
+            onClick={async () => {
+              setTriggerSending(true)
+              setTriggerResult(null)
+              try {
+                const res = await fetch('/api/notifications/trigger', { method: 'POST' })
+                const json = await res.json() as { sent?: number; tasks?: number; today?: string; debug?: string[]; error?: string }
+                if (res.ok) {
+                  const lines = [
+                    `✓ ${json.sent}件送信 (対象タスク ${json.tasks}件) [${json.today}]`,
+                    ...(json.debug ?? []),
+                  ]
+                  setTriggerResult(lines.join('\n'))
+                } else {
+                  setTriggerResult(`エラー: ${json.error ?? `HTTP ${res.status}`}`)
+                }
+              } catch (e) {
+                setTriggerResult(`ネットワークエラー: ${String(e)}`)
+              }
+              setTriggerSending(false)
+            }}
+            disabled={triggerSending}
+            className="w-full py-2 text-sm rounded-lg border border-[#2a2a3e] text-[#3a3a52] hover:text-[#6b6b8a] hover:border-[#3a3a52] disabled:opacity-50 transition-colors font-mono text-xs"
+          >
+            {triggerSending ? '配信中...' : '⚡ デバッグ: 今すぐ朝7時通知を配信'}
+          </button>
+          {triggerResult && (
+            <pre className={`text-[10px] leading-relaxed whitespace-pre-wrap break-all px-1 ${triggerResult.startsWith('✓') ? 'text-[#39ff14]' : 'text-[#ff006e]'}`}>
+              {triggerResult}
+            </pre>
+          )}
         </div>
       </section>
 
