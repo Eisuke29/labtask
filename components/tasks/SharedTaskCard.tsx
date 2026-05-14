@@ -74,10 +74,13 @@ export default function SharedTaskCard({ task, partnerName, myColor, readOnly, o
         <div className="flex gap-1 flex-shrink-0 mt-0.5">
           {/* Mine */}
           <button
-            onClick={handleToggleMine}
+            onClick={readOnly ? undefined : handleToggleMine}
+            disabled={readOnly}
             title="自分"
             className={`w-[18px] h-[18px] rounded-full border-2 transition-all flex items-center justify-center
-              ${task.is_mine_completed ? 'bg-[#39ff14] border-[#39ff14]' : 'border-[#39ff14]/50 hover:border-[#39ff14]'}`}
+              ${readOnly
+                ? 'opacity-40 cursor-not-allowed border-[#39ff14]/30'
+                : task.is_mine_completed ? 'bg-[#39ff14] border-[#39ff14]' : 'border-[#39ff14]/50 hover:border-[#39ff14]'}`}
           >
             {task.is_mine_completed && (
               <svg className="w-2.5 h-2.5 text-[#0a0a0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -87,10 +90,13 @@ export default function SharedTaskCard({ task, partnerName, myColor, readOnly, o
           </button>
           {/* Partner */}
           <button
-            onClick={(e) => { e.stopPropagation(); onTogglePartner() }}
+            onClick={readOnly ? undefined : (e) => { e.stopPropagation(); onTogglePartner() }}
+            disabled={readOnly}
             title={partnerName}
             className={`w-[18px] h-[18px] rounded-full border-2 transition-all flex items-center justify-center
-              ${task.is_partner_completed ? 'bg-[#7c3aed] border-[#7c3aed]' : 'border-[#7c3aed]/50 hover:border-[#7c3aed]'}`}
+              ${readOnly
+                ? 'opacity-40 cursor-not-allowed border-[#7c3aed]/30'
+                : task.is_partner_completed ? 'bg-[#7c3aed] border-[#7c3aed]' : 'border-[#7c3aed]/50 hover:border-[#7c3aed]'}`}
           >
             {task.is_partner_completed && (
               <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

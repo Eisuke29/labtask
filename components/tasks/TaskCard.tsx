@@ -64,9 +64,12 @@ export default function TaskCard({ task, currentUserId, myColor, readOnly, onEdi
       <div className="flex items-start gap-2.5">
         {/* Checkbox */}
         <button
-          onClick={(e) => { e.stopPropagation(); handleToggle() }}
+          onClick={(e) => { e.stopPropagation(); if (!readOnly) handleToggle() }}
+          disabled={readOnly}
           className={`mt-0.5 flex-shrink-0 w-[18px] h-[18px] rounded-full border-2 transition-all duration-200 flex items-center justify-center
-            ${isCompleted
+            ${readOnly
+              ? 'opacity-40 cursor-not-allowed border-[#3a3a52]'
+              : isCompleted
               ? 'bg-[#39ff14] border-[#39ff14]'
               : checking
               ? 'border-[#39ff14] scale-110 animate-pulse-check'
