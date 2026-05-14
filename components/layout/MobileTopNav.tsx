@@ -59,7 +59,10 @@ export default function MobileTopNav() {
   }
 
   return (
-    <nav className="md:hidden flex-shrink-0 bg-[#13131a] border-b border-[#1e1e2e] z-40">
+    <nav
+      className="md:hidden flex-shrink-0 bg-[#13131a] border-b border-[#1e1e2e] z-40"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
       <div className="flex">
         {tabs.map((tab) => {
           const active = pathname === tab.href
@@ -68,7 +71,7 @@ export default function MobileTopNav() {
             <button
               key={tab.href}
               onClick={() => handleNav(tab.href)}
-              className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5"
+              className="flex-1 flex flex-col items-center justify-center py-1.5 gap-0.5"
             >
               {loading ? <Spinner /> : tab.icon(active)}
               <span className={`text-[10px] ${active || loading ? 'text-[#00d4ff]' : 'text-[#6b6b8a]'}`}>

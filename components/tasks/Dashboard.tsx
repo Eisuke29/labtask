@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -319,7 +319,9 @@ export default function Dashboard({ currentUser, partner }: Props) {
     onDelete: readOnly ? undefined : async () => { await deleteCategory(cat.id) },
   })
 
-  const colW = 'min(calc(100vw - 1.5rem), 272px)'
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
+  const colW = isMobile ? 'calc(100vw - 2rem)' : '272px'
   const colSnap = { width: colW, scrollSnapAlign: 'start' as const }
 
   return (
