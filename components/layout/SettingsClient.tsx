@@ -229,7 +229,13 @@ export default function SettingsClient({ user, partner, devices: initialDevices 
         <h2 className="font-heading font-semibold text-sm text-[#e8e8f0] mb-4">プッシュ通知</h2>
 
         {!isSupported ? (
-          <p className="text-sm text-[#6b6b8a]">このブラウザはプッシュ通知をサポートしていません</p>
+          <div className="space-y-3">
+            <p className="text-sm text-[#6b6b8a]">このブラウザはプッシュ通知をサポートしていません</p>
+            <div className="bg-[#1e1e2e] rounded-lg p-3 space-y-1.5">
+              <p className="text-xs text-[#e8e8f0] font-medium">📱 iPhoneの場合</p>
+              <p className="text-xs text-[#6b6b8a]">Safariで開き、下の共有ボタン（□↑）→「ホーム画面に追加」→ ホーム画面のアイコンから起動すると通知が使えます</p>
+            </div>
+          </div>
         ) : (
           <div className="space-y-3">
             {!isSubscribed ? (
