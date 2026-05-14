@@ -118,6 +118,16 @@ export default function SettingsClient({ user, partner, devices: initialDevices 
     setTimeout(() => setTestResult(null), 8000)
   }
 
+  const [unpairing, setUnpairing] = useState(false)
+
+  const handleUnpair = async () => {
+    if (!confirm(`${partner?.display_name} とのペアリングを解除しますか？`)) return
+    setUnpairing(true)
+    await fetch('/api/pair/reset', { method: 'POST' })
+    router.refresh()
+    setUnpairing(false)
+  }
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push('/auth')
@@ -201,9 +211,13 @@ export default function SettingsClient({ user, partner, devices: initialDevices 
               <p className="text-sm text-[#e8e8f0] font-medium">{partner.display_name}</p>
               <p className="text-xs text-[#6b6b8a]">ペアリング済み</p>
             </div>
-            <div className="ml-auto">
-              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: myColor }} />
-            </div>
+            <button
+              onClick={handleUnpair}
+              disabled={unpairing}
+              className="ml-auto text-xs text-[#6b6b8a] hover:text-[#ff006e] transition-colors disabled:opacity-50"
+            >
+              {unpairing ? '解除中...' : '解除'}
+            </button>
           </div>
         ) : (
           <p className="text-sm text-[#6b6b8a]">ペアリングされていません</p>
