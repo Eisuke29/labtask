@@ -25,6 +25,7 @@ interface Props {
   onAddFull: () => void
   onEditTask: (task: TaskWithCompletions) => void
   onToggleCompletion: (taskId: string, userId: string, isCompleted: boolean) => void
+  onRename?: (name: string) => Promise<void>
   onDelete?: () => Promise<void>
 }
 
@@ -177,7 +178,7 @@ export default function KanbanColumn({
   currentUserId, partnerId, partnerName,
   ownerType, readOnly, canAdd,
   insertBefore, activeId,
-  onQuickAdd, onAddFull, onEditTask, onToggleCompletion, onDelete,
+  onQuickAdd, onAddFull, onEditTask, onToggleCompletion, onRename, onDelete,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: droppableId })
   const [addPhase, setAddPhase] = useState<AddPhase>({ kind: 'none' })
@@ -189,7 +190,22 @@ export default function KanbanColumn({
   const [addError, setAddError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [renaming, setRenaming] = useState(false)
+  const [renameValue, setRenameValue] = useState('')
+  const renameRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const startRename = () => {
+    setRenameValue(title)
+    setRenaming(true)
+    setTimeout(() => { renameRef.current?.select() }, 30)
+  }
+
+  const submitRename = async () => {
+    const trimmed = renameValue.trim()
+    if (trimmed && trimmed !== title) await onRename?.(trimmed)
+    setRenaming(false)
+  }
 
   const activeTasks = tasks
     .filter((t) => !t.is_completed)
@@ -268,12 +284,28 @@ export default function KanbanColumn({
     >
       {/* Column header */}
       <div className="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-[#1e1e2e]">
-        <div className="flex items-center gap-2 min-w-0">
-          <h3 className="text-sm font-semibold text-[#e8e8f0] truncate">{title}</h3>
-          {activeTasks.length > 0 && (
-            <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#1e1e2e] text-[#6b6b8a] flex-shrink-0">
-              {activeTasks.length}
-            </span>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {renaming ? (
+            <input
+              ref={renameRef}
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); submitRename() }
+                if (e.key === 'Escape') setRenaming(false)
+              }}
+              onBlur={submitRename}
+              className="flex-1 min-w-0 bg-[#0a0a0f] border border-[#00d4ff] rounded px-2 py-0.5 text-sm font-semibold text-[#e8e8f0] focus:outline-none"
+            />
+          ) : (
+            <>
+              <h3 className="text-sm font-semibold text-[#e8e8f0] truncate">{title}</h3>
+              {activeTasks.length > 0 && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full bg-[#1e1e2e] text-[#6b6b8a] flex-shrink-0">
+                  {activeTasks.length}
+                </span>
+              )}
+            </>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -282,8 +314,19 @@ export default function KanbanColumn({
               キャンセル
             </button>
           )}
-          {!readOnly && !isAdding && !confirmDelete && (
+          {!readOnly && !isAdding && !confirmDelete && !renaming && (
             <>
+              {onRename && (
+                <button
+                  onClick={startRename}
+                  title="リスト名を編集"
+                  className="flex-shrink-0 text-[#3a3a52] hover:text-[#6b6b8a] transition-colors p-1 rounded active:scale-90"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                </button>
+              )}
               <button
                 onClick={onAddFull}
                 title="詳細付きで追加"

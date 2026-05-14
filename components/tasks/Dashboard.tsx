@@ -85,7 +85,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const {
     categories, loading, refetch,
     createTask, updateTask, deleteTask,
-    toggleCompletion, createCategory, deleteCategory, updateTaskOrder,
+    toggleCompletion, createCategory, updateCategory, deleteCategory, updateTaskOrder,
   } = useTasks(currentUser.id, partner?.id ?? '')
 
   const boardRef = useRef<HTMLDivElement>(null)
@@ -139,7 +139,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
   const mineCats    = categories.filter((c) => c.created_by === currentUser.id && c.owner_type === 'mine')
   const sharedCats  = categories.filter((c) => c.owner_type === 'shared')
-  const partnerCats = categories.filter((c) => partner && c.created_by === partner.id && c.owner_type === 'partner')
+  const partnerCats = categories.filter((c) => partner && c.created_by === partner.id && c.owner_type === 'mine')
 
   const topTabs: { key: TopTab; label: string; color: string }[] = [
     { key: 'mine',    label: currentUser.display_name || 'あなた', color: mineColor },
@@ -321,6 +321,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
     onAddFull: () => openCreateModal(ownerType, cat.id),
     onEditTask: openEditModal,
     onToggleCompletion: toggleCompletion,
+    onRename: readOnly ? undefined : async (name: string) => { await updateCategory(cat.id, { name }) },
     onDelete: readOnly ? undefined : async () => { await deleteCategory(cat.id) },
   })
 

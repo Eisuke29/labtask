@@ -120,6 +120,13 @@ export function useTasks(currentUserId: string, partnerId: string) {
     return { error }
   }
 
+  const updateCategory = async (categoryId: string, data: { name?: string; color?: string }) => {
+    const { error } = await supabase.from('categories').update(data).eq('id', categoryId)
+    if (error) console.error('[updateCategory] failed:', error)
+    else fetchData()
+    return { error }
+  }
+
   const deleteCategory = async (categoryId: string) => {
     const { error } = await supabase.from('categories').delete().eq('id', categoryId)
     if (error) console.error('[deleteCategory] failed:', error)
@@ -146,6 +153,7 @@ export function useTasks(currentUserId: string, partnerId: string) {
     deleteTask,
     toggleCompletion,
     createCategory,
+    updateCategory,
     deleteCategory,
     updateCategoryOrder,
     updateTaskOrder,
