@@ -15,7 +15,13 @@ import {
   type DragOverEvent,
   type DragEndEvent,
 } from '@dnd-kit/core'
-import { sortableKeyboardCoordinates } from '@dnd-kit/sortable'
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useTasks } from '@/hooks/useTasks'
 import KanbanColumn from './KanbanColumn'
 import TaskCard from './TaskCard'
@@ -28,6 +34,29 @@ type TopTab = 'mine' | 'shared' | 'partner'
 interface Props {
   currentUser: User
   partner: User | null
+}
+
+function SortableCol({
+  catId, disabled, width, children,
+}: {
+  catId: string
+  disabled?: boolean
+  width: string
+  children: (handle: React.HTMLAttributes<HTMLElement>) => React.ReactNode
+}) {
+  const { setNodeRef, transform, transition, attributes, listeners } = useSortable({
+    id: `cat-${catId}`,
+    disabled,
+  })
+  return (
+    <div
+      ref={setNodeRef}
+      className="flex-shrink-0 h-full"
+      style={{ width, scrollSnapAlign: 'start', transform: CSS.Transform.toString(transform), transition }}
+    >
+      {children(disabled ? {} : { ...attributes, ...listeners })}
+    </div>
+  )
 }
 
 function isNotifyActive(task: TaskWithCompletions): boolean {
@@ -85,7 +114,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const {
     categories, loading, refetch,
     createTask, updateTask, deleteTask,
-    toggleCompletion, createCategory, updateCategory, deleteCategory, updateTaskOrder,
+    toggleCompletion, createCategory, updateCategory, deleteCategory, updateCategoryOrder,
   } = useTasks(currentUser.id, partner?.id ?? '')
 
   const boardRef = useRef<HTMLDivElement>(null)
@@ -106,6 +135,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
   const [activeTop, setActiveTop] = useState<TopTab>('mine')
   const [activeId, setActiveId]   = useState<string | null>(null)
+  const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [insertInfo, setInsertInfo] = useState<{ columnId: string; insertBeforeId: string | null } | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -182,11 +212,17 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
   // ── DnD handlers ─────────────────────────────────────────────
   const handleDragStart = ({ active }: DragStartEvent) => {
-    setActiveId(active.id as string)
+    const id = active.id as string
+    if (id.startsWith('cat-')) {
+      setActiveCatId(id.slice(4))
+    } else {
+      setActiveId(id)
+    }
     setInsertInfo(null)
   }
 
   const handleDragOver = ({ active, over }: DragOverEvent) => {
+    if ((active.id as string).startsWith('cat-')) return
     if (!over) { setInsertInfo(null); return }
 
     const dragId = active.id as string
@@ -205,6 +241,9 @@ export default function Dashboard({ currentUser, partner }: Props) {
     const targetCat = categories.find((c) => c.tasks.some((t) => t.id === overId))
     if (!targetCat) { setInsertInfo(null); return }
 
+    // Ignore hovering over the dragged card itself in same column — keep previous insertInfo
+    if (overId === dragId) return
+
     const activeTasks = targetCat.tasks.filter((t) => !t.is_completed).sort((a, b) => a.sort_order - b.sort_order)
     const overIndex   = activeTasks.findIndex((t) => t.id === overId)
     const sourceCat   = categories.find((c) => c.tasks.some((t) => t.id === dragId))
@@ -222,8 +261,44 @@ export default function Dashboard({ currentUser, partner }: Props) {
     setInsertInfo({ columnId: targetCat.id, insertBeforeId })
   }
 
-  const handleDragEnd = async ({ active }: DragEndEvent) => {
-    const dragId = active.id as string
+  const handleDragEnd = async ({ active, over }: DragEndEvent) => {
+    const id = active.id as string
+
+    // Category reorder
+    if (id.startsWith('cat-')) {
+      const catId = id.slice(4)
+      setActiveCatId(null)
+      if (!over || over.id === active.id) return
+      const overId = over.id as string
+      let overCatId: string
+      if (overId.startsWith('cat-')) {
+        overCatId = overId.slice(4)
+      } else if (overId.startsWith('col-')) {
+        overCatId = overId.slice(4)
+      } else if (!overId.startsWith('tab-')) {
+        const parentCat = categories.find((c) => c.tasks.some((t) => t.id === overId))
+        if (!parentCat) return
+        overCatId = parentCat.id
+      } else {
+        return
+      }
+      const currentCats =
+        activeTop === 'mine' ? mineCats :
+        activeTop === 'shared' ? sharedCats :
+        partnerCats
+      const sorted = [...currentCats].sort((a, b) => a.sort_order - b.sort_order)
+      const fromIdx = sorted.findIndex((c) => c.id === catId)
+      const toIdx   = sorted.findIndex((c) => c.id === overCatId)
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+      const reordered = [...sorted]
+      const [moved] = reordered.splice(fromIdx, 1)
+      reordered.splice(toIdx, 0, moved)
+      await Promise.all(reordered.map((cat, i) => updateCategoryOrder(cat.id, (i + 1) * 1000)))
+      refetch()
+      return
+    }
+
+    const dragId = id
     const info   = insertInfo
 
     setActiveId(null)
@@ -244,12 +319,18 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
     let newSortOrder: number
     if (info.insertBeforeId === null) {
+      // Append to end
       newSortOrder = targetTasks.length > 0 ? Math.max(...targetTasks.map((t) => t.sort_order)) + 1 : 1
     } else {
       const beforeIdx = targetTasks.findIndex((t) => t.id === info.insertBeforeId)
-      if (beforeIdx <= 0) {
-        newSortOrder = targetTasks.length > 0 ? targetTasks[0].sort_order - 1 : 1
+      if (beforeIdx === -1) {
+        // Target not found (filtered out as dragged item) — append to end
+        newSortOrder = targetTasks.length > 0 ? Math.max(...targetTasks.map((t) => t.sort_order)) + 1 : 1
+      } else if (beforeIdx === 0) {
+        // Insert before first task
+        newSortOrder = targetTasks[0].sort_order - 1
       } else {
+        // Insert between two tasks
         newSortOrder = (targetTasks[beforeIdx - 1].sort_order + targetTasks[beforeIdx].sort_order) / 2
       }
     }
@@ -264,6 +345,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
   const handleDragCancel = () => {
     setActiveId(null)
+    setActiveCatId(null)
     setInsertInfo(null)
   }
 
@@ -406,25 +488,37 @@ export default function Dashboard({ currentUser, partner }: Props) {
               </div>
 
               {/* えいすけタブ: 自分のカラムのみ */}
-              {activeTop === 'mine' && mineCats.map((cat) => (
-                <div key={cat.id} className="flex-shrink-0 h-full" style={colSnap}>
-                  <KanbanColumn {...colProps(cat, 'mine', false)} />
-                </div>
-              ))}
+              {activeTop === 'mine' && (
+                <SortableContext items={mineCats.map((c) => `cat-${c.id}`)} strategy={horizontalListSortingStrategy}>
+                  {mineCats.map((cat) => (
+                    <SortableCol key={cat.id} catId={cat.id} width={colW}>
+                      {(handle) => <KanbanColumn {...colProps(cat, 'mine', false)} columnDragHandle={handle} />}
+                    </SortableCol>
+                  ))}
+                </SortableContext>
+              )}
 
               {/* 共通タブ: 共有カラムのみ */}
-              {activeTop === 'shared' && sharedCats.map((cat) => (
-                <div key={cat.id} className="flex-shrink-0 h-full" style={colSnap}>
-                  <KanbanColumn {...colProps(cat, 'shared', false)} />
-                </div>
-              ))}
+              {activeTop === 'shared' && (
+                <SortableContext items={sharedCats.map((c) => `cat-${c.id}`)} strategy={horizontalListSortingStrategy}>
+                  {sharedCats.map((cat) => (
+                    <SortableCol key={cat.id} catId={cat.id} width={colW}>
+                      {(handle) => <KanbanColumn {...colProps(cat, 'shared', false)} columnDragHandle={handle} />}
+                    </SortableCol>
+                  ))}
+                </SortableContext>
+              )}
 
               {/* 友人タブ: 読み取り専用 */}
-              {activeTop === 'partner' && partnerCats.map((cat) => (
-                <div key={cat.id} className="flex-shrink-0 h-full" style={colSnap}>
-                  <KanbanColumn {...colProps(cat, 'partner', true)} />
-                </div>
-              ))}
+              {activeTop === 'partner' && (
+                <SortableContext items={partnerCats.map((c) => `cat-${c.id}`)} strategy={horizontalListSortingStrategy}>
+                  {partnerCats.map((cat) => (
+                    <SortableCol key={cat.id} catId={cat.id} disabled width={colW}>
+                      {(handle) => <KanbanColumn {...colProps(cat, 'partner', true)} columnDragHandle={handle} />}
+                    </SortableCol>
+                  ))}
+                </SortableContext>
+              )}
 
               {/* New list buttons */}
               {activeTop === 'mine' && (
@@ -468,6 +562,20 @@ export default function Dashboard({ currentUser, partner }: Props) {
               )}
             </div>
           )}
+          {activeCatId && (() => {
+            const cat = categories.find((c) => c.id === activeCatId)
+            return cat ? (
+              <div
+                className="bg-[#0d0d14] border-2 rounded-xl px-3 py-2.5 rotate-[1.5deg] scale-[1.03] cursor-grabbing"
+                style={{ width: colW, borderColor: cat.color, boxShadow: '0 24px 60px rgba(0,0,0,0.6)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                  <h3 className="text-sm font-semibold text-[#e8e8f0] truncate">{cat.name}</h3>
+                </div>
+              </div>
+            ) : null
+          })()}
         </DragOverlay>
       </DndContext>
 

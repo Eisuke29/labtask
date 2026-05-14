@@ -27,6 +27,7 @@ interface Props {
   onToggleCompletion: (taskId: string, userId: string, isCompleted: boolean) => void
   onRename?: (name: string) => Promise<void>
   onDelete?: () => Promise<void>
+  columnDragHandle?: React.HTMLAttributes<HTMLElement>
 }
 
 type AddPhase =
@@ -178,7 +179,7 @@ export default function KanbanColumn({
   currentUserId, partnerId, partnerName,
   ownerType, readOnly, canAdd,
   insertBefore, activeId,
-  onQuickAdd, onAddFull, onEditTask, onToggleCompletion, onRename, onDelete,
+  onQuickAdd, onAddFull, onEditTask, onToggleCompletion, onRename, onDelete, columnDragHandle,
 }: Props) {
   const { setNodeRef, isOver } = useDroppable({ id: droppableId })
   const [addPhase, setAddPhase] = useState<AddPhase>({ kind: 'none' })
@@ -284,6 +285,17 @@ export default function KanbanColumn({
     >
       {/* Column header */}
       <div className="flex-shrink-0 flex items-center justify-between px-3 py-2.5 border-b border-[#1e1e2e]">
+        {columnDragHandle && Object.keys(columnDragHandle).length > 0 && (
+          <div
+            {...columnDragHandle}
+            className="flex-shrink-0 cursor-grab active:cursor-grabbing mr-1.5 text-[#2a2a3e] hover:text-[#6b6b8a] transition-colors touch-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M7 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM7 8a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm-6 6a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 0a2 2 0 1 1 0 4 2 2 0 0 1 0-4z" />
+            </svg>
+          </div>
+        )}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {renaming ? (
             <input
