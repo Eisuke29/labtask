@@ -13,19 +13,17 @@ export async function POST(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // Current hour in JST (UTC+9)
+  // Runs once daily at 22:00 UTC (07:00 JST) on Vercel Hobby plan
   const nowJST = new Date(Date.now() + 9 * 60 * 60 * 1000)
-  const currentHourJST = nowJST.getUTCHours()
   const today = nowJST.toISOString().split('T')[0]
 
-  // Only notify users whose preferred notification hour matches the current JST hour
+  // Notify all users (Hobby plan: single daily run, no per-user hour filtering)
   const { data: targetUsers } = await supabaseAdmin
     .from('users')
     .select('id, partner_id')
-    .eq('notify_hour', currentHourJST)
 
   if (!targetUsers || targetUsers.length === 0) {
-    return NextResponse.json({ sent: 0, hour: currentHourJST })
+    return NextResponse.json({ sent: 0 })
   }
 
   const targetUserIds = new Set(targetUsers.map((u: { id: string }) => u.id))
@@ -70,5 +68,5 @@ export async function POST(request: Request) {
   }
 
   await Promise.allSettled(notifications)
-  return NextResponse.json({ sent: notifications.length, hour: currentHourJST })
+  return NextResponse.json({ sent: notifications.length })
 }

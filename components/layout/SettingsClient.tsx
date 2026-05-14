@@ -363,27 +363,8 @@ export default function SettingsClient({ user, partner, devices: initialDevices 
 
         {/* 通知時刻 */}
         <div className="mt-4 pt-4 border-t border-[#1e1e2e]">
-          <label className="block text-xs text-[#6b6b8a] mb-2">毎日の通知時刻（日本時間）</label>
-          <div className="flex gap-2">
-            <select
-              value={notifyHour}
-              onChange={(e) => setNotifyHour(Number(e.target.value))}
-              className="flex-1 bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg px-3 py-2 text-sm text-[#e8e8f0] focus:outline-none focus:border-[#7c3aed]"
-            >
-              {Array.from({ length: 24 }, (_, i) => (
-                <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
-              ))}
-            </select>
-            <button
-              onClick={handleSaveHour}
-              disabled={savingHour || notifyHour === (user.notify_hour ?? 7)}
-              className="px-4 py-2 text-sm rounded-lg font-medium disabled:opacity-50 transition-colors text-[#0a0a0f]"
-              style={{ backgroundColor: myColor }}
-            >
-              {savedHour ? '✓' : savingHour ? '...' : '保存'}
-            </button>
-          </div>
-          <p className="text-[10px] text-[#6b6b8a] mt-1">通知中タスクがある場合、この時刻にプッシュ通知が届きます</p>
+          <p className="text-xs text-[#6b6b8a]">通知時刻: <span className="text-[#e8e8f0]">毎朝 07:00（日本時間）固定</span></p>
+          <p className="text-[10px] text-[#6b6b8a] mt-1">通知中タスクがある場合、毎朝7時にプッシュ通知が届きます</p>
         </div>
       </section>
 
