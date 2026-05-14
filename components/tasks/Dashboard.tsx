@@ -98,9 +98,14 @@ function SortableCol({
   )
 }
 
+function localDateString() {
+  // sv-SE locale gives YYYY-MM-DD in the device's local timezone (not UTC)
+  return new Date().toLocaleDateString('sv-SE')
+}
+
 function isNotifyActive(task: TaskWithCompletions): boolean {
   if (!task.notify_start_date) return false
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateString()
   if (task.notify_start_date > today) return false
   if (task.owner_type === 'shared') {
     if (task.is_mine_completed && task.is_partner_completed) return false
@@ -226,11 +231,10 @@ export default function Dashboard({ currentUser, partner }: Props) {
 
   const isPartnerTab = activeTop === 'partner'
 
-  const notifySrcCats =
-    activeTop === 'mine'   ? mineCats :
-    activeTop === 'shared' ? sharedCats :
-                             partnerCats
-  const notifyTasks = notifySrcCats.flatMap((c) => c.tasks).filter(isNotifyActive)
+  // 全タブのタスクを対象にする（タブ切り替えで消えないように）
+  const notifyTasks = [...mineCats, ...sharedCats, ...partnerCats]
+    .flatMap((c) => c.tasks)
+    .filter(isNotifyActive)
 
   const openCreateModal = (ownerType: OwnerType, categoryId = '') => {
     setDefaultOwnerType(ownerType)
@@ -516,13 +520,16 @@ export default function Dashboard({ currentUser, partner }: Props) {
                 <div className="flex-1 overflow-y-auto p-2 space-y-2" data-scroll="column">
                   {notifyTasks.length === 0 ? (
                     <p className="text-center text-xs text-[#6b6b8a] py-8">通知対象なし</p>
-                  ) : notifyTasks.map((task) =>
-                    task.owner_type === 'shared' ? (
+                  ) : notifyTasks.map((task) => {
+                    // 相手が作成したmineタスクは読み取り専用
+                    const isPartnerOwned = task.owner_type === 'mine' && task.created_by !== currentUser.id
+                    const cardColor = isPartnerOwned ? partnerColor : mineColor
+                    return task.owner_type === 'shared' ? (
                       <SharedTaskCard
                         key={task.id} task={task}
                         currentUserId={currentUser.id} partnerId={partner?.id ?? ''} partnerName={partnerName}
-                        myColor={isPartnerTab ? partnerColor : mineColor}
-                        readOnly={isPartnerTab}
+                        myColor={cardColor}
+                        readOnly={false}
                         onEdit={() => openEditModal(task)}
                         onToggleMine={() => toggleCompletion(task.id, currentUser.id, task.is_mine_completed)}
                         onTogglePartner={() => toggleCompletion(task.id, partner?.id ?? '', task.is_partner_completed)}
@@ -531,16 +538,16 @@ export default function Dashboard({ currentUser, partner }: Props) {
                       <TaskCard
                         key={task.id} task={task}
                         currentUserId={currentUser.id}
-                        myColor={isPartnerTab ? partnerColor : mineColor}
-                        readOnly={isPartnerTab}
-                        onEdit={() => openEditModal(task)}
+                        myColor={cardColor}
+                        readOnly={isPartnerOwned}
+                        onEdit={() => isPartnerOwned ? undefined : openEditModal(task)}
                         onToggle={() => {
                           const isOwner = task.created_by === currentUser.id
                           toggleCompletion(task.id, isOwner ? currentUser.id : (partner?.id ?? ''), isOwner ? task.is_mine_completed : task.is_partner_completed)
                         }}
                       />
                     )
-                  )}
+                  })}
                 </div>
               </div>
 
