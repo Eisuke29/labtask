@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Category, Task, TaskCompletion, TaskWithCompletions, CategoryWithTasks, OwnerType } from '@/types'
 
 export function useTasks(currentUserId: string, partnerId: string) {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [categories, setCategories] = useState<CategoryWithTasks[]>([])
   const [loading, setLoading] = useState(true)
 

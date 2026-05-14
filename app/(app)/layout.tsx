@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { redirect } from 'next/navigation'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import Header from '@/components/layout/Header'
-import MobileTabBar from '@/components/layout/MobileTabBar'
+import MobileTopNav from '@/components/layout/MobileTopNav'
 import PairingGate from '@/components/layout/PairingGate'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -49,12 +49,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .from('users').select('*').eq('id', profile.partner_id).single()
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="flex flex-col" style={{ height: '100dvh' }}>
       <Header user={profile} partner={partner} />
-      <main className="flex-1 pb-16 md:pb-0">
+      <MobileTopNav />
+      <main className="flex-1 min-h-0 overflow-y-auto">
         {children}
       </main>
-      <MobileTabBar />
     </div>
   )
 }

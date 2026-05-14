@@ -323,7 +323,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const colSnap = { width: colW, scrollSnapAlign: 'start' as const }
 
   return (
-    <div className="flex flex-col" style={{ height: 'calc(100vh - 65px)' }}>
+    <div className="flex flex-col h-full">
       {/* DndContext wraps tabs + board so tabs can act as drop targets */}
       <DndContext
         sensors={sensors}
