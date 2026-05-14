@@ -14,6 +14,7 @@ import {
   type DragStartEvent,
   type DragOverEvent,
   type DragEndEvent,
+  type CollisionDetection,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -36,25 +37,63 @@ interface Props {
   partner: User | null
 }
 
+// カテゴリドラッグ時は cat- IDのみ、タスクドラッグ時は cat- を除外
+const customCollisionDetection: CollisionDetection = (args) => {
+  const draggingId = args.active?.id as string
+  if (draggingId?.startsWith('cat-')) {
+    return closestCenter({
+      ...args,
+      droppableContainers: args.droppableContainers.filter(
+        ({ id }) => (id as string).startsWith('cat-')
+      ),
+    })
+  }
+  return closestCenter({
+    ...args,
+    droppableContainers: args.droppableContainers.filter(
+      ({ id }) => !(id as string).startsWith('cat-')
+    ),
+  })
+}
+
 function SortableCol({
-  catId, disabled, width, children,
+  catId, disabled, width, isInsertTarget, insertSide, children,
 }: {
   catId: string
   disabled?: boolean
   width: string
+  isInsertTarget?: boolean
+  insertSide?: 'left' | 'right'
   children: (handle: React.HTMLAttributes<HTMLElement>) => React.ReactNode
 }) {
-  const { setNodeRef, transform, transition, attributes, listeners } = useSortable({
+  const { setNodeRef, transform, transition, attributes, listeners, isDragging } = useSortable({
     id: `cat-${catId}`,
     disabled,
   })
+
+  const glowStyle = isInsertTarget
+    ? insertSide === 'left'
+      ? { boxShadow: 'inset 3px 0 0 #00d4ff, -2px 0 12px rgba(0,212,255,0.35)' }
+      : { boxShadow: 'inset -3px 0 0 #00d4ff, 2px 0 12px rgba(0,212,255,0.35)' }
+    : {}
+
   return (
     <div
       ref={setNodeRef}
-      className="flex-shrink-0 h-full"
-      style={{ width, scrollSnapAlign: 'start', transform: CSS.Transform.toString(transform), transition }}
+      className="flex-shrink-0 h-full rounded-xl transition-shadow duration-150"
+      style={{
+        width,
+        scrollSnapAlign: 'start',
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ...glowStyle,
+      }}
     >
-      {children(disabled ? {} : { ...attributes, ...listeners })}
+      {isDragging ? (
+        <div className="h-full rounded-xl border-2 border-dashed border-[#2a2a3e] bg-[#1e1e2e]/20 animate-pulse" />
+      ) : (
+        children(disabled ? {} : { ...attributes, ...listeners })
+      )}
     </div>
   )
 }
@@ -134,8 +173,9 @@ export default function Dashboard({ currentUser, partner }: Props) {
   }, [])
 
   const [activeTop, setActiveTop] = useState<TopTab>('mine')
-  const [activeId, setActiveId]   = useState<string | null>(null)
+  const [activeId, setActiveId]     = useState<string | null>(null)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
+  const [overCatId, setOverCatId]   = useState<string | null>(null)
   const [insertInfo, setInsertInfo] = useState<{ columnId: string; insertBeforeId: string | null } | null>(null)
 
   const [modalOpen, setModalOpen] = useState(false)
@@ -170,6 +210,13 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const mineCats    = categories.filter((c) => c.created_by === currentUser.id && c.owner_type === 'mine')
   const sharedCats  = categories.filter((c) => c.owner_type === 'shared')
   const partnerCats = categories.filter((c) => partner && c.created_by === partner.id && c.owner_type === 'mine')
+
+  // カテゴリ並び替え時の挿入方向を計算
+  const activeCatTabCats =
+    activeTop === 'mine' ? mineCats : activeTop === 'shared' ? sharedCats : partnerCats
+  const activeCatLocalIdx = activeCatId ? activeCatTabCats.findIndex((c) => c.id === activeCatId) : -1
+  const overCatLocalIdx   = overCatId   ? activeCatTabCats.findIndex((c) => c.id === overCatId)   : -1
+  const catInsertSide: 'left' | 'right' = overCatLocalIdx > activeCatLocalIdx ? 'right' : 'left'
 
   const topTabs: { key: TopTab; label: string; color: string }[] = [
     { key: 'mine',    label: currentUser.display_name || 'あなた', color: mineColor },
@@ -222,7 +269,15 @@ export default function Dashboard({ currentUser, partner }: Props) {
   }
 
   const handleDragOver = ({ active, over }: DragOverEvent) => {
-    if ((active.id as string).startsWith('cat-')) return
+    if ((active.id as string).startsWith('cat-')) {
+      const overId = over?.id as string | undefined
+      setOverCatId(
+        overId?.startsWith('cat-') && overId !== active.id
+          ? overId.slice(4)
+          : null
+      )
+      return
+    }
     if (!over) { setInsertInfo(null); return }
 
     const dragId = active.id as string
@@ -268,6 +323,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
     if (id.startsWith('cat-')) {
       const catId = id.slice(4)
       setActiveCatId(null)
+      setOverCatId(null)
       if (!over || over.id === active.id) return
       const overId = over.id as string
       let overCatId: string
@@ -346,6 +402,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const handleDragCancel = () => {
     setActiveId(null)
     setActiveCatId(null)
+    setOverCatId(null)
     setInsertInfo(null)
   }
 
@@ -412,7 +469,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
       {/* DndContext wraps tabs + board so tabs can act as drop targets */}
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={customCollisionDetection}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -491,7 +548,11 @@ export default function Dashboard({ currentUser, partner }: Props) {
               {activeTop === 'mine' && (
                 <SortableContext items={mineCats.map((c) => `cat-${c.id}`)} strategy={horizontalListSortingStrategy}>
                   {mineCats.map((cat) => (
-                    <SortableCol key={cat.id} catId={cat.id} width={colW}>
+                    <SortableCol
+                      key={cat.id} catId={cat.id} width={colW}
+                      isInsertTarget={activeCatId !== null && overCatId === cat.id}
+                      insertSide={catInsertSide}
+                    >
                       {(handle) => <KanbanColumn {...colProps(cat, 'mine', false)} columnDragHandle={handle} />}
                     </SortableCol>
                   ))}
@@ -502,7 +563,11 @@ export default function Dashboard({ currentUser, partner }: Props) {
               {activeTop === 'shared' && (
                 <SortableContext items={sharedCats.map((c) => `cat-${c.id}`)} strategy={horizontalListSortingStrategy}>
                   {sharedCats.map((cat) => (
-                    <SortableCol key={cat.id} catId={cat.id} width={colW}>
+                    <SortableCol
+                      key={cat.id} catId={cat.id} width={colW}
+                      isInsertTarget={activeCatId !== null && overCatId === cat.id}
+                      insertSide={catInsertSide}
+                    >
                       {(handle) => <KanbanColumn {...colProps(cat, 'shared', false)} columnDragHandle={handle} />}
                     </SortableCol>
                   ))}
