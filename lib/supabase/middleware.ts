@@ -23,7 +23,13 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch {
+    // If session refresh fails, treat as logged out
+  }
 
   const { pathname } = request.nextUrl
 
