@@ -95,19 +95,16 @@ export default function TaskCard({ task, currentUserId, myColor, readOnly, onEdi
 
           {/* Due date + notify */}
           {(task.due_date || task.notify_start_date) && (
-            <div className="flex items-center gap-2 mt-1.5">
+            <div className="flex items-center gap-1.5 mt-1.5 whitespace-nowrap overflow-hidden">
               {task.due_date && (
-                <span className={`inline-flex items-center gap-1 text-xs font-mono ${
+                <span className={`inline-flex items-center gap-0.5 text-[11px] font-mono shrink-0 ${
                   isOverdue ? 'text-red-400' : isDueSoon ? 'text-orange-400' : 'text-[#6b6b8a]'
                 }`}>
-                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  {format(new Date(task.due_date), 'M月d日(E)', { locale: ja })}
+                  📅{format(new Date(task.due_date), 'M/d(E)', { locale: ja })}
                 </span>
               )}
               {task.notify_start_date && (
-                <span className="text-xs text-[#7c3aed]">🔔</span>
+                <span className="text-[11px] shrink-0">🔔</span>
               )}
             </div>
           )}
