@@ -379,6 +379,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
                       <SharedTaskCard
                         key={task.id} task={task}
                         currentUserId={currentUser.id} partnerId={partner?.id ?? ''} partnerName={partnerName}
+                        myColor={isPartnerTab ? partnerColor : mineColor}
                         readOnly={isPartnerTab}
                         onEdit={() => openEditModal(task)}
                         onToggleMine={() => toggleCompletion(task.id, currentUser.id, task.is_mine_completed)}
@@ -387,7 +388,9 @@ export default function Dashboard({ currentUser, partner }: Props) {
                     ) : (
                       <TaskCard
                         key={task.id} task={task}
-                        currentUserId={currentUser.id} readOnly={isPartnerTab}
+                        currentUserId={currentUser.id}
+                        myColor={isPartnerTab ? partnerColor : mineColor}
+                        readOnly={isPartnerTab}
                         onEdit={() => openEditModal(task)}
                         onToggle={() => {
                           const isOwner = task.created_by === currentUser.id

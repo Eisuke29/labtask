@@ -13,6 +13,7 @@ interface Props {
   partnerId: string
   partnerName: string
   ownerType: OwnerType
+  myColor: string
   onEditTask: (task: TaskWithCompletions) => void
   onToggleCompletion: (taskId: string, userId: string, isCompleted: boolean) => void
 }
@@ -25,6 +26,7 @@ export default function CategoryGroup({
   partnerId,
   partnerName,
   ownerType,
+  myColor,
   onEditTask,
   onToggleCompletion,
 }: Props) {
@@ -65,6 +67,7 @@ export default function CategoryGroup({
                   currentUserId={currentUserId}
                   partnerId={partnerId}
                   partnerName={partnerName}
+                  myColor={myColor}
                   onEdit={() => onEditTask(task)}
                   onToggleMine={() => onToggleCompletion(task.id, currentUserId, task.is_mine_completed)}
                   onTogglePartner={() => onToggleCompletion(task.id, partnerId, task.is_partner_completed)}
@@ -74,6 +77,7 @@ export default function CategoryGroup({
                   key={task.id}
                   task={task}
                   currentUserId={currentUserId}
+                  myColor={myColor}
                   onEdit={() => onEditTask(task)}
                   onToggle={() => {
                     const isOwner = task.created_by === currentUserId

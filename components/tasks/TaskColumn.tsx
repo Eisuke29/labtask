@@ -22,6 +22,7 @@ interface Props {
   currentUserId: string
   partnerId: string
   partnerName: string
+  myColor: string
   allCategories: CategoryWithTasks[]
   onAddTask: () => void
   onEditTask: (task: TaskWithCompletions) => void
@@ -38,6 +39,7 @@ export default function TaskColumn({
   currentUserId,
   partnerId,
   partnerName,
+  myColor,
   allCategories,
   onAddTask,
   onEditTask,
@@ -127,6 +129,7 @@ export default function TaskColumn({
                 partnerId={partnerId}
                 partnerName={partnerName}
                 ownerType={ownerType}
+                myColor={myColor}
                 onEditTask={onEditTask}
                 onToggleCompletion={onToggleCompletion}
               />
