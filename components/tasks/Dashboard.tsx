@@ -669,6 +669,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
             <span className="text-[11px] font-medium">{tab.label}</span>
           </button>
         ))}
+        <RefreshBtn onRefresh={refetch} />
       </div>
 
       {/* New list modal */}
@@ -723,6 +724,33 @@ export default function Dashboard({ currentUser, partner }: Props) {
         />
       )}
     </div>
+  )
+}
+
+function RefreshBtn({ onRefresh }: { onRefresh: () => void }) {
+  const [spinning, setSpinning] = useState(false)
+
+  const handleClick = () => {
+    if (spinning) return
+    setSpinning(true)
+    onRefresh()
+    setTimeout(() => setSpinning(false), 800)
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      className="flex flex-col items-center justify-center gap-1 py-3 px-3 text-[#6b6b8a] active:text-[#e8e8f0] transition-colors"
+    >
+      <svg
+        className={`w-4 h-4 transition-transform ${spinning ? 'animate-spin' : ''}`}
+        fill="none" stroke="currentColor" viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      <span className="text-[11px] font-medium">更新</span>
+    </button>
   )
 }
 
