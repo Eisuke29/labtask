@@ -74,7 +74,7 @@ export default function CompletedList({ currentUser, partner }: Props) {
     if (filter === 'all') return true
     if (filter === 'shared') return t.owner_type === 'shared'
     if (filter === 'mine') return t.owner_type === 'mine' && t.created_by === currentUser.id
-    return t.owner_type === 'partner' && t.created_by === partner?.id
+    return t.owner_type === 'mine' && t.created_by === partner?.id
   })
 
   if (loading) return <div className="flex justify-center py-20 text-[#6b6b8a]">読み込み中...</div>
@@ -99,7 +99,7 @@ export default function CompletedList({ currentUser, partner }: Props) {
                 if (f === 'all') return true
                 if (f === 'shared') return t.owner_type === 'shared'
                 if (f === 'mine') return t.owner_type === 'mine' && t.created_by === currentUser.id
-                return t.owner_type === 'partner' && t.created_by === partner?.id
+                return t.owner_type === 'mine' && t.created_by === partner?.id
               }).length})
             </span>
           </button>
@@ -111,9 +111,11 @@ export default function CompletedList({ currentUser, partner }: Props) {
       ) : (
         <div className="space-y-2">
           {filtered.map((task) => {
-            const lastCompleted = task.completions.reduce((latest, c) =>
-              new Date(c.completed_at) > new Date(latest.completed_at) ? c : latest
-            )
+            const myComp = task.completions.find((c) => c.user_id === currentUser.id)
+            const partnerComp = partner ? task.completions.find((c) => c.user_id === partner.id) : undefined
+            const isPartnerOwned = task.owner_type === 'mine' && task.created_by === partner?.id
+            const isShared = task.owner_type === 'shared'
+
             return (
               <div
                 key={task.id}
@@ -122,23 +124,42 @@ export default function CompletedList({ currentUser, partner }: Props) {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-1 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: task.category?.color ?? '#6b6b8a' }} />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-[#6b6b8a] line-through truncate">{task.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-medium text-[#6b6b8a] line-through truncate">{task.title}</p>
+                      {isShared && (
+                        <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-[#00d4ff]/10 text-[#00d4ff]">共通</span>
+                      )}
+                      {isPartnerOwned && (
+                        <span className="flex-shrink-0 text-[10px] px-1.5 py-0.5 rounded-full bg-[#7c3aed]/10 text-[#7c3aed]">
+                          {partner?.display_name || '友人'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-0.5 mt-0.5">
                       {task.category && (
                         <span className="text-xs text-[#6b6b8a]">{task.category.name}</span>
                       )}
-                      <span className="text-xs font-mono text-[#6b6b8a]">
-                        {format(new Date(lastCompleted.completed_at), 'M/d HH:mm', { locale: ja })} 完了
-                      </span>
+                      {myComp && (
+                        <span className="text-xs font-mono text-[#6b6b8a]">
+                          自分: {format(new Date(myComp.completed_at), 'M/d HH:mm', { locale: ja })} 完了
+                        </span>
+                      )}
+                      {partnerComp && (
+                        <span className="text-xs font-mono text-[#6b6b8a]">
+                          {partner?.display_name || '友人'}: {format(new Date(partnerComp.completed_at), 'M/d HH:mm', { locale: ja })} 完了
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => undoCompletion(task.id)}
-                  className="flex-shrink-0 text-xs text-[#6b6b8a] hover:text-[#e8e8f0] px-2 py-1 rounded border border-[#1e1e2e] hover:border-[#6b6b8a] transition-colors"
-                >
-                  取り消し
-                </button>
+                {myComp && (
+                  <button
+                    onClick={() => undoCompletion(task.id)}
+                    className="flex-shrink-0 text-xs text-[#6b6b8a] hover:text-[#e8e8f0] px-2 py-1 rounded border border-[#1e1e2e] hover:border-[#6b6b8a] transition-colors"
+                  >
+                    取り消し
+                  </button>
+                )}
               </div>
             )
           })}

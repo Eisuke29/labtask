@@ -58,21 +58,45 @@ export async function runDailyNotifications(): Promise<DailyNotificationResult> 
       candidateIds = [task.created_by]
     }
 
-    const recipientIds = candidateIds.filter(
-      (id) => targetUserIds.has(id) && !completedUserIds.includes(id)
-    )
-
-    if (recipientIds.length === 0) continue
+    let recipientEntries: { userId: string; body: string }[]
 
     const isDueToday = task.due_date === today
     const title = isDueToday ? '⏰ 今日が期限！' : '📌 タスクリマインダー'
-    const body = isDueToday
-      ? `今日が期限！「${task.title}」を完了させましょう`
-      : `「${task.title}」の期限が近づいています`
 
-    debug.push(`task="${task.title}" to=[${recipientIds.join(',')}]`)
+    if (task.owner_type === 'shared') {
+      // 共有タスク: 両方が完了していない限り、2人とも通知する
+      const bothCompleted =
+        candidateIds.length > 0 && candidateIds.every((id) => completedUserIds.includes(id))
+      if (bothCompleted) continue
 
-    for (const userId of recipientIds) {
+      recipientEntries = candidateIds
+        .filter((id) => targetUserIds.has(id))
+        .map((id) => {
+          const iDoneAlready = completedUserIds.includes(id)
+          const body = iDoneAlready
+            ? `「${task.title}」相手がまだ完了していません`
+            : isDueToday
+            ? `今日が期限！「${task.title}」を完了させましょう`
+            : `「${task.title}」の期限が近づいています`
+          return { userId: id, body }
+        })
+    } else {
+      // 個人タスク: 未完了の本人にのみ通知
+      recipientEntries = candidateIds
+        .filter((id) => targetUserIds.has(id) && !completedUserIds.includes(id))
+        .map((id) => ({
+          userId: id,
+          body: isDueToday
+            ? `今日が期限！「${task.title}」を完了させましょう`
+            : `「${task.title}」の期限が近づいています`,
+        }))
+    }
+
+    if (recipientEntries.length === 0) continue
+
+    debug.push(`task="${task.title}" to=[${recipientEntries.map((e) => e.userId).join(',')}]`)
+
+    for (const { userId, body } of recipientEntries) {
       notifications.push(
         sendPushToUser(userId, { title, body, url: '/dashboard' }).then(() => {})
       )

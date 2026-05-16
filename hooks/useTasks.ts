@@ -104,6 +104,17 @@ export function useTasks(currentUserId: string, partnerId: string) {
       await supabase.from('task_completions').delete().eq('task_id', taskId).eq('user_id', userId)
     } else {
       await supabase.from('task_completions').insert({ task_id: taskId, user_id: userId })
+      // 自分が共有タスクを完了した時だけパートナーに通知
+      if (userId === currentUserId) {
+        const task = categories.flatMap((c) => c.tasks).find((t) => t.id === taskId)
+        if (task?.owner_type === 'shared') {
+          fetch('/api/notifications/task-completion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ taskId, completedByUserId: userId }),
+          }).catch(() => {})
+        }
+      }
     }
     fetchData()
   }
