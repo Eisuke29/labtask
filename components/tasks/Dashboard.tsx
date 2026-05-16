@@ -182,6 +182,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [overCatId, setOverCatId]   = useState<string | null>(null)
   const [insertInfo, setInsertInfo] = useState<{ columnId: string; insertBeforeId: string | null } | null>(null)
+  const [optimisticCatOrder, setOptimisticCatOrder] = useState<Record<string, number>>({})
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTask, setEditingTask]     = useState<TaskWithCompletions | null>(null)
@@ -212,9 +213,16 @@ export default function Dashboard({ currentUser, partner }: Props) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
 
-  const mineCats    = categories.filter((c) => c.created_by === currentUser.id && c.owner_type === 'mine')
-  const sharedCats  = categories.filter((c) => c.owner_type === 'shared')
-  const partnerCats = categories.filter((c) => partner && c.created_by === partner.id && c.owner_type === 'mine')
+  const applyOptimisticOrder = (cats: typeof categories) =>
+    Object.keys(optimisticCatOrder).length === 0
+      ? cats
+      : [...cats]
+          .map((c) => ({ ...c, sort_order: optimisticCatOrder[c.id] ?? c.sort_order }))
+          .sort((a, b) => a.sort_order - b.sort_order)
+
+  const mineCats    = applyOptimisticOrder(categories.filter((c) => c.created_by === currentUser.id && c.owner_type === 'mine'))
+  const sharedCats  = applyOptimisticOrder(categories.filter((c) => c.owner_type === 'shared'))
+  const partnerCats = applyOptimisticOrder(categories.filter((c) => partner && c.created_by === partner.id && c.owner_type === 'mine'))
 
   // カテゴリ並び替え時の挿入方向を計算
   const activeCatTabCats =
@@ -327,9 +335,11 @@ export default function Dashboard({ currentUser, partner }: Props) {
     // Category reorder
     if (id.startsWith('cat-')) {
       const catId = id.slice(4)
-      setActiveCatId(null)
-      setOverCatId(null)
-      if (!over || over.id === active.id) return
+      if (!over || over.id === active.id) {
+        setActiveCatId(null)
+        setOverCatId(null)
+        return
+      }
       const overId = over.id as string
       let overCatId: string
       if (overId.startsWith('cat-')) {
@@ -338,10 +348,10 @@ export default function Dashboard({ currentUser, partner }: Props) {
         overCatId = overId.slice(4)
       } else if (!overId.startsWith('tab-')) {
         const parentCat = categories.find((c) => c.tasks.some((t) => t.id === overId))
-        if (!parentCat) return
+        if (!parentCat) { setActiveCatId(null); setOverCatId(null); return }
         overCatId = parentCat.id
       } else {
-        return
+        setActiveCatId(null); setOverCatId(null); return
       }
       const currentCats =
         activeTop === 'mine' ? mineCats :
@@ -350,12 +360,21 @@ export default function Dashboard({ currentUser, partner }: Props) {
       const sorted = [...currentCats].sort((a, b) => a.sort_order - b.sort_order)
       const fromIdx = sorted.findIndex((c) => c.id === catId)
       const toIdx   = sorted.findIndex((c) => c.id === overCatId)
-      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) {
+        setActiveCatId(null); setOverCatId(null); return
+      }
       const reordered = [...sorted]
       const [moved] = reordered.splice(fromIdx, 1)
       reordered.splice(toIdx, 0, moved)
+      // 楽観的更新: ドロップ直後に新しい順序を即時反映してスナップバックを防ぐ
+      const newOrder: Record<string, number> = {}
+      reordered.forEach((cat, i) => { newOrder[cat.id] = (i + 1) * 1000 })
+      setOptimisticCatOrder(newOrder)
+      setActiveCatId(null)
+      setOverCatId(null)
       await Promise.all(reordered.map((cat, i) => updateCategoryOrder(cat.id, (i + 1) * 1000)))
-      refetch()
+      await refetch()
+      setOptimisticCatOrder({})
       return
     }
 
