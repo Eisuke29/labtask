@@ -19,7 +19,6 @@ import {
 import {
   SortableContext,
   horizontalListSortingStrategy,
-  verticalListSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
 } from '@dnd-kit/sortable'
@@ -183,9 +182,6 @@ export default function Dashboard({ currentUser, partner }: Props) {
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [overCatId, setOverCatId]   = useState<string | null>(null)
   const [insertInfo, setInsertInfo] = useState<{ columnId: string; insertBeforeId: string | null } | null>(null)
-  const [notifyActiveId, setNotifyActiveId] = useState<string | null>(null)
-  const [notifyOrderIds, setNotifyOrderIds] = useState<string[] | null>(null)
-  useEffect(() => { setNotifyOrderIds(null) }, [activeTop])
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editingTask, setEditingTask]     = useState<TaskWithCompletions | null>(null)
@@ -239,16 +235,7 @@ export default function Dashboard({ currentUser, partner }: Props) {
     activeTop === 'mine'   ? mineCats :
     activeTop === 'shared' ? sharedCats :
                              partnerCats
-  const baseNotifyTasks = notifySrcCats.flatMap((c) => c.tasks).filter(isNotifyActive)
-  const orderedNotifyTasks = notifyOrderIds
-    ? [
-        ...notifyOrderIds
-          .map((id) => baseNotifyTasks.find((t) => t.id === id))
-          .filter((t): t is TaskWithCompletions => t !== undefined),
-        ...baseNotifyTasks.filter((t) => !notifyOrderIds.includes(t.id)),
-      ]
-    : baseNotifyTasks
-  const notifyActiveTask = notifyActiveId ? orderedNotifyTasks.find((t) => t.id === notifyActiveId) : null
+  const notifyTasks = notifySrcCats.flatMap((c) => c.tasks).filter(isNotifyActive)
 
   const openCreateModal = (ownerType: OwnerType, categoryId = '') => {
     setDefaultOwnerType(ownerType)
@@ -424,23 +411,6 @@ export default function Dashboard({ currentUser, partner }: Props) {
     setInsertInfo(null)
   }
 
-  const handleNotifyDragStart = ({ active }: DragStartEvent) => {
-    setNotifyActiveId(active.id as string)
-  }
-
-  const handleNotifyDragEnd = ({ active, over }: DragEndEvent) => {
-    setNotifyActiveId(null)
-    if (!over || active.id === over.id) return
-    const currentIds = notifyOrderIds ?? orderedNotifyTasks.map((t) => t.id)
-    const oldIndex = currentIds.indexOf(active.id as string)
-    const newIndex = currentIds.indexOf(over.id as string)
-    if (oldIndex === -1 || newIndex === -1) return
-    const newIds = [...currentIds]
-    const [moved] = newIds.splice(oldIndex, 1)
-    newIds.splice(newIndex, 0, moved)
-    setNotifyOrderIds(newIds)
-  }
-
   const openNewList = (ownerType: OwnerType) => {
     setNewListOwnerType(ownerType)
     setNewListName('')
@@ -542,69 +512,39 @@ export default function Dashboard({ currentUser, partner }: Props) {
                 <div className="flex-shrink-0 flex items-center gap-2 px-3 py-3 border-b border-[#1e1e2e]">
                   <span>🔔</span>
                   <h3 className="text-sm font-semibold text-amber-400">通知中</h3>
-                  {orderedNotifyTasks.length > 0 && (
+                  {notifyTasks.length > 0 && (
                     <span className="text-xs px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
-                      {orderedNotifyTasks.length}
+                      {notifyTasks.length}
                     </span>
                   )}
                 </div>
-                <div className="flex-1 overflow-y-auto p-2" data-scroll="column">
-                  {orderedNotifyTasks.length === 0 ? (
+                <div className="flex-1 overflow-y-auto p-2 space-y-2" data-scroll="column">
+                  {notifyTasks.length === 0 ? (
                     <p className="text-center text-xs text-[#6b6b8a] py-8">通知対象なし</p>
-                  ) : (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragStart={handleNotifyDragStart}
-                      onDragEnd={handleNotifyDragEnd}
-                      onDragCancel={() => setNotifyActiveId(null)}
-                    >
-                      <SortableContext items={orderedNotifyTasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                        <div className="space-y-2">
-                          {orderedNotifyTasks.map((task) =>
-                            task.owner_type === 'shared' ? (
-                              <SharedTaskCard
-                                key={task.id} task={task}
-                                currentUserId={currentUser.id} partnerId={partner?.id ?? ''} partnerName={partnerName}
-                                myColor={isPartnerTab ? partnerColor : mineColor}
-                                readOnly={isPartnerTab}
-                                onEdit={() => openEditModal(task)}
-                                onToggleMine={() => toggleCompletion(task.id, currentUser.id, task.is_mine_completed)}
-                                onTogglePartner={() => toggleCompletion(task.id, partner?.id ?? '', task.is_partner_completed)}
-                              />
-                            ) : (
-                              <TaskCard
-                                key={task.id} task={task}
-                                currentUserId={currentUser.id}
-                                myColor={isPartnerTab ? partnerColor : mineColor}
-                                readOnly={isPartnerTab}
-                                onEdit={() => openEditModal(task)}
-                                onToggle={() => {
-                                  const isOwner = task.created_by === currentUser.id
-                                  toggleCompletion(task.id, isOwner ? currentUser.id : (partner?.id ?? ''), isOwner ? task.is_mine_completed : task.is_partner_completed)
-                                }}
-                              />
-                            )
-                          )}
-                        </div>
-                      </SortableContext>
-                      <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)' }}>
-                        {notifyActiveTask && (
-                          <div
-                            className="bg-[#1e1e2e] border border-amber-500/40 rounded-xl px-3 py-3 rotate-[1deg] scale-[1.02] cursor-grabbing"
-                            style={{ width: colW, boxShadow: '0 16px 40px rgba(0,0,0,0.5), 0 0 20px rgba(245,158,11,0.1)' }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px]">🔔</span>
-                              <p className="text-sm font-medium text-[#e8e8f0] truncate">{notifyActiveTask.title}</p>
-                            </div>
-                            {notifyActiveTask.due_date && (
-                              <p className="text-xs text-[#6b6b8a] mt-1.5 pl-5">📅 {notifyActiveTask.due_date}</p>
-                            )}
-                          </div>
-                        )}
-                      </DragOverlay>
-                    </DndContext>
+                  ) : notifyTasks.map((task) =>
+                    task.owner_type === 'shared' ? (
+                      <SharedTaskCard
+                        key={task.id} task={task}
+                        currentUserId={currentUser.id} partnerId={partner?.id ?? ''} partnerName={partnerName}
+                        myColor={isPartnerTab ? partnerColor : mineColor}
+                        readOnly={isPartnerTab}
+                        onEdit={() => openEditModal(task)}
+                        onToggleMine={() => toggleCompletion(task.id, currentUser.id, task.is_mine_completed)}
+                        onTogglePartner={() => toggleCompletion(task.id, partner?.id ?? '', task.is_partner_completed)}
+                      />
+                    ) : (
+                      <TaskCard
+                        key={task.id} task={task}
+                        currentUserId={currentUser.id}
+                        myColor={isPartnerTab ? partnerColor : mineColor}
+                        readOnly={isPartnerTab}
+                        onEdit={() => openEditModal(task)}
+                        onToggle={() => {
+                          const isOwner = task.created_by === currentUser.id
+                          toggleCompletion(task.id, isOwner ? currentUser.id : (partner?.id ?? ''), isOwner ? task.is_mine_completed : task.is_partner_completed)
+                        }}
+                      />
+                    )
                   )}
                 </div>
               </div>
