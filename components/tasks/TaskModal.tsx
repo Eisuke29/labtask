@@ -72,7 +72,7 @@ export default function TaskModal({ task, defaultOwnerType, defaultCategoryId, l
     setSaving(true)
     await onSave({
       title: title.trim(),
-      description: description.trim() || undefined,
+      description: description.trim() || null,
       category_id: categoryId,
       owner_type: ownerType,
       due_date: dueDate || undefined,
