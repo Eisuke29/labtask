@@ -734,16 +734,22 @@ export default function Dashboard({ currentUser, partner }: Props) {
           currentUserId={currentUser.id}
           onClose={() => setModalOpen(false)}
           onSave={async (data) => {
-            if (editingTask) await updateTask(editingTask.id, data)
-            else await createTask(data as Parameters<typeof createTask>[0])
+            if (editingTask) {
+              const { error } = await updateTask(editingTask.id, data)
+              if (error) { alert('保存できませんでした。もう一度試してください。'); return }
+            } else {
+              await createTask(data as Parameters<typeof createTask>[0])
+            }
             setModalOpen(false)
           }}
-          onDelete={editingTask && editingTask.created_by === currentUser.id
-            ? async () => {
-                const { error } = await deleteTask(editingTask.id)
-                if (error) { alert('削除できませんでした。もう一度試してください。'); return }
-                setModalOpen(false)
-              }
+          onDelete={editingTask && (
+            editingTask.created_by === currentUser.id ||
+            editingTask.owner_type === 'shared'
+          ) ? async () => {
+              const { error } = await deleteTask(editingTask.id)
+              if (error) { alert('削除できませんでした。もう一度試してください。'); return }
+              setModalOpen(false)
+            }
             : undefined}
           onCreateCategory={createCategory}
         />

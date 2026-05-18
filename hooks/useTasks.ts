@@ -88,10 +88,18 @@ export function useTasks(currentUserId: string, partnerId: string) {
   }
 
   const updateTask = async (taskId: string, data: Partial<Task>) => {
-    const { error } = await supabase.from('tasks').update(data).eq('id', taskId)
-    if (error) console.error('[updateTask] failed:', error)
-    else fetchData()
-    return { error }
+    const { data: rows, error } = await supabase.from('tasks').update(data).eq('id', taskId).select('id')
+    if (error) {
+      console.error('[updateTask] error:', error)
+      return { error }
+    }
+    if (!rows?.length) {
+      const e = { message: 'no rows updated (RLS blocked or task not found)' }
+      console.error('[updateTask]', e.message)
+      return { error: e }
+    }
+    fetchData()
+    return { error: null }
   }
 
   const deleteTask = async (taskId: string) => {
