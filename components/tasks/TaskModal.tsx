@@ -22,7 +22,7 @@ interface Props {
   onClose: () => void
   onSave: (data: {
     title: string
-    description?: string
+    description?: string | null
     category_id: string
     owner_type: OwnerType
     due_date?: string
