@@ -95,10 +95,18 @@ export function useTasks(currentUserId: string, partnerId: string) {
   }
 
   const deleteTask = async (taskId: string) => {
-    const { error } = await supabase.from('tasks').delete().eq('id', taskId)
-    if (error) console.error('[deleteTask] failed:', error)
-    else fetchData()
-    return { error }
+    const { data, error } = await supabase.from('tasks').delete().eq('id', taskId).select('id')
+    if (error) {
+      console.error('[deleteTask] error:', error)
+      return { error }
+    }
+    if (!data?.length) {
+      const e = { message: 'no rows deleted (RLS blocked or task not found)' }
+      console.error('[deleteTask]', e.message)
+      return { error: e }
+    }
+    fetchData()
+    return { error: null }
   }
 
   const toggleCompletion = async (taskId: string, userId: string, isCompleted: boolean) => {

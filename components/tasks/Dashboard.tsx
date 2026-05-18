@@ -738,7 +738,13 @@ export default function Dashboard({ currentUser, partner }: Props) {
             else await createTask(data as Parameters<typeof createTask>[0])
             setModalOpen(false)
           }}
-          onDelete={editingTask ? async () => { await deleteTask(editingTask.id); setModalOpen(false) } : undefined}
+          onDelete={editingTask && editingTask.created_by === currentUser.id
+            ? async () => {
+                const { error } = await deleteTask(editingTask.id)
+                if (error) { alert('削除できませんでした。もう一度試してください。'); return }
+                setModalOpen(false)
+              }
+            : undefined}
           onCreateCategory={createCategory}
         />
       )}
