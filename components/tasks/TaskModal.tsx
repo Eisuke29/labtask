@@ -60,11 +60,9 @@ export default function TaskModal({ task, defaultOwnerType, defaultCategoryId, l
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerType])
 
-  // Validation: both notify dates must be set or neither
-  const notifyPartial = (!!notifyStart) !== (!!notifyEnd)
-  const notifyError = notifyPartial
-    ? notifyStart ? '通知終了日も設定してください' : '通知開始日も設定してください'
-    : null
+  // Validation: notifyEnd without notifyStart is invalid; notifyStart alone is OK (no end = notify indefinitely)
+  const notifyPartial = !notifyStart && !!notifyEnd
+  const notifyError = notifyPartial ? '通知開始日も設定してください' : null
 
   const canSave = !!title.trim() && !!categoryId && !notifyPartial
 
@@ -246,7 +244,7 @@ export default function TaskModal({ task, defaultOwnerType, defaultCategoryId, l
             <div className="flex items-center gap-2">
               <span className="text-[#7c3aed]">🔔</span>
               <span className="text-xs font-medium text-[#e8e8f0]">通知設定</span>
-              <span className="text-[10px] text-[#6b6b8a]">（両方設定するか、両方空にしてください）</span>
+              <span className="text-[10px] text-[#6b6b8a]">（終了日のみ設定は不可）</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -257,7 +255,7 @@ export default function TaskModal({ task, defaultOwnerType, defaultCategoryId, l
                   value={notifyStart}
                   onChange={(e) => setNotifyStart(e.target.value)}
                   className={`w-full bg-[#0a0a0f] border rounded-lg px-2 py-2 text-xs text-[#e8e8f0] font-mono focus:outline-none [color-scheme:dark] ${
-                    notifyError && !notifyEnd ? 'border-[#ff006e]' : 'border-[#1e1e2e] focus:border-[#7c3aed]'
+                    notifyError ? 'border-[#ff006e]' : 'border-[#1e1e2e] focus:border-[#7c3aed]'
                   }`}
                 />
               </div>
@@ -267,9 +265,7 @@ export default function TaskModal({ task, defaultOwnerType, defaultCategoryId, l
                   type="date"
                   value={notifyEnd}
                   onChange={(e) => setNotifyEnd(e.target.value)}
-                  className={`w-full bg-[#0a0a0f] border rounded-lg px-2 py-2 text-xs text-[#e8e8f0] font-mono focus:outline-none [color-scheme:dark] ${
-                    notifyError && !notifyStart ? 'border-[#ff006e]' : 'border-[#1e1e2e] focus:border-[#7c3aed]'
-                  }`}
+                  className="w-full bg-[#0a0a0f] border border-[#1e1e2e] rounded-lg px-2 py-2 text-xs text-[#e8e8f0] font-mono focus:outline-none focus:border-[#7c3aed] [color-scheme:dark]"
                 />
               </div>
             </div>

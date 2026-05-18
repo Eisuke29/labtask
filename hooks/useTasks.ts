@@ -89,13 +89,15 @@ export function useTasks(currentUserId: string, partnerId: string) {
 
   const updateTask = async (taskId: string, data: Partial<Task>) => {
     const { error } = await supabase.from('tasks').update(data).eq('id', taskId)
-    if (!error) fetchData()
+    if (error) console.error('[updateTask] failed:', error)
+    else fetchData()
     return { error }
   }
 
   const deleteTask = async (taskId: string) => {
     const { error } = await supabase.from('tasks').delete().eq('id', taskId)
-    if (!error) fetchData()
+    if (error) console.error('[deleteTask] failed:', error)
+    else fetchData()
     return { error }
   }
 
